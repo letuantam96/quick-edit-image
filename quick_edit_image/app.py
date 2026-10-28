@@ -122,7 +122,6 @@ class App(tk.Tk):
         self.wm_thumb_label = ttk.Label(top)
         self.wm_thumb_label.pack(side="left", padx=(0, 6))
         ttk.Button(top, text="Đổi…", command=self.pick_watermark).pack(side="left")
-        ttk.Button(top, text="Xuất tất cả", command=self.export_all).pack(side="right")
 
         ttk.Separator(self).pack(fill="x")
         body = ttk.Frame(self)
@@ -184,6 +183,7 @@ class App(tk.Tk):
         ttk.Label(bottom, text="Xuất vào:", foreground="#666").pack(side="left")
         ttk.Label(bottom, textvariable=self.out_dir).pack(side="left", padx=6)
         ttk.Button(bottom, text="Chọn thư mục…", command=self.pick_out_dir).pack(side="left")
+        ttk.Button(bottom, text="Xuất vào thư mục", command=self.export_all).pack(side="left", padx=(6, 0))
         ttk.Label(bottom, textvariable=self.status, foreground="#666").pack(side="right")
 
     def _list_fits(self) -> bool:

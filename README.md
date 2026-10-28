@@ -9,7 +9,7 @@ Quick edit image tool for Thanh Hang — paste ảnh, tự resize, đóng logo w
 3. Copy ảnh (từ web, Zalo, Photoshop, hoặc copy file trong Explorer) rồi bấm nút **Paste ảnh từ bộ nhớ** (hoặc nhấn **Ctrl+V**) trong app. Ảnh được thêm vào danh sách và có watermark ngay. Nút **Xoá tất cả ảnh** phía trên danh sách xoá hết ảnh (có hỏi lại trước).
 4. Kéo watermark để đổi vị trí, kéo 4 góc để phóng to / thu nhỏ. Thumbnail ở danh sách bên trái cập nhật theo ngay. Ảnh paste tiếp theo sẽ dùng vị trí và cỡ watermark của lần chỉnh gần nhất.
 5. Gõ **tên file** cho từng ảnh (chọn ảnh ở danh sách bên trái). Bấm icon **thùng rác** ở mỗi dòng (hoặc phím Delete) để bỏ ảnh. Số thứ tự (vd. `2/7`) nằm ngay dưới thùng rác.
-6. Chọn thư mục ở thanh dưới, bấm **Xuất tất cả**. Ảnh chưa đặt tên, trùng tên hoặc tên có ký tự không hợp lệ sẽ nháy đỏ và không xuất cho đến khi sửa.
+6. Chọn thư mục ở thanh dưới, bấm **Xuất vào thư mục** ngay cạnh nút Chọn thư mục. Ảnh chưa đặt tên, trùng tên hoặc tên có ký tự không hợp lệ sẽ nháy đỏ và không xuất cho đến khi sửa.
 
 App nhớ chiều rộng, watermark, thư mục xuất và vị trí watermark cho lần mở sau (`~/.quick_edit_image.json`).
 
