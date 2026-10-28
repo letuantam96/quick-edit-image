@@ -130,8 +130,11 @@ class App(tk.Tk):
         left = ttk.Frame(body, width=440, padding=8)
         left.pack(side="left", fill="y")
         left.pack_propagate(False)
-        self.count_lbl = ttk.Label(left, foreground="#666")
-        self.count_lbl.pack(anchor="w")
+        header = ttk.Frame(left)
+        header.pack(fill="x")
+        self.count_lbl = ttk.Label(header, foreground="#666")
+        self.count_lbl.pack(side="left")
+        ttk.Button(header, text="Xoá tất cả ảnh", command=self.clear_all).pack(side="right")
         holder = ttk.Frame(left)
         holder.pack(fill="both", expand=True, pady=6)
         self.list_canvas = tk.Canvas(holder, highlightthickness=0, background=ROW_BG)
@@ -146,8 +149,10 @@ class App(tk.Tk):
             self.list_canvas.itemconfigure(self.list_window, width=e.width), self._update_list_scroll()))
         self.list_canvas.bind("<MouseWheel>", self._on_list_wheel)
         self.list_frame.bind("<MouseWheel>", self._on_list_wheel)
-        tk.Label(left, text="Ctrl+V để thêm ảnh", foreground="#777", relief="groove",
-                 borderwidth=1, pady=10).pack(fill="x")
+        ttk.Style(self).configure("Paste.TButton", padding=(0, 8))
+        ttk.Button(left, text="Paste ảnh từ bộ nhớ", style="Paste.TButton",
+                   command=self.on_paste).pack(fill="x")
+        ttk.Label(left, text="hoặc ấn Ctrl + V để thêm ảnh", foreground="#888").pack(pady=(4, 0))
 
         ttk.Separator(body, orient="vertical").pack(side="left", fill="y")
 
@@ -322,6 +327,17 @@ class App(tk.Tk):
         self.after_idle(lambda: self._scroll_into_view(self.selected))
         self.name_entry.focus_set()
         return "break"
+
+    def clear_all(self) -> None:
+        if not self.items:
+            return
+        if not messagebox.askyesno("Xoá tất cả ảnh", f"Xoá hết {len(self.items)} ảnh trong danh sách?",
+                                   icon="warning", default="no"):
+            return
+        self.items.clear()
+        self.flashing.clear()
+        self.selected = None
+        self.refresh_all()
 
     def delete_item(self, i: int | None) -> None:
         if i is None or i >= len(self.items):
