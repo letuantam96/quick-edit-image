@@ -206,7 +206,8 @@ def encode_jpeg(img: Image.Image, max_bytes: int = MAX_BYTES) -> bytes:
     return best
 
 
-def export_item(item: Item, width: int, wm: Image.Image | None, out_dir: Path) -> Path:
+def export_item(item: Item, width: int, wm: Image.Image | None, out_dir: Path,
+                max_bytes: int = MAX_BYTES) -> Path:
     dst = out_dir / (clean_name(item.name) + EXPORT_EXT)
-    dst.write_bytes(encode_jpeg(compose(item.resized(width), wm, item.placement)))
+    dst.write_bytes(encode_jpeg(compose(item.resized(width), wm, item.placement), max_bytes))
     return dst

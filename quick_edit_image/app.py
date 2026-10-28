@@ -57,6 +57,8 @@ class App(tk.Tk):
         self.selected: int | None = None
         self.last_placement = Placement(**cfg.get("placement", {}))
         self.width_var = tk.StringVar(value=str(cfg.get("width", 1080)))
+        self.kb_var = tk.StringVar(value=str(cfg.get("max_kb", MAX_BYTES // 1024)))
+        self.max_kb = self._parse_max_kb() or MAX_BYTES // 1024
         self.target_width = self._parse_width() or 1080
         self.wm_path = tk.StringVar(value=cfg.get("watermark", ""))
         self.wm: Image.Image | None = None
@@ -121,7 +123,7 @@ class App(tk.Tk):
 
     def save_config(self) -> None:
         p = self.last_placement
-        cfg = {"width": self.target_width, "watermark": self.wm_path.get(), "out_dir": self.out_dir.get(),
+        cfg = {"width": self.target_width, "max_kb": self.max_kb, "watermark": self.wm_path.get(), "out_dir": self.out_dir.get(),
                "placement": {"x": p.x, "y": p.y, "scale": p.scale}}
         try:
             CONFIG_PATH.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -139,6 +141,13 @@ class App(tk.Tk):
         width_entry.bind("<Return>", lambda _: self.apply_width())
         width_entry.bind("<FocusOut>", lambda _: self.apply_width())
         ttk.Label(top, text="px").pack(side="left")
+        ttk.Separator(top, orient="vertical").pack(side="left", fill="y", padx=12)
+        ttk.Label(top, text="Dung lượng tối ưu").pack(side="left")
+        kb_entry = ttk.Entry(top, textvariable=self.kb_var, width=6, justify="right")
+        kb_entry.pack(side="left", padx=(6, 2))
+        kb_entry.bind("<Return>", lambda _: self.apply_max_kb())
+        kb_entry.bind("<FocusOut>", lambda _: self.apply_max_kb())
+        ttk.Label(top, text="KB").pack(side="left")
         ttk.Separator(top, orient="vertical").pack(side="left", fill="y", padx=12)
         ttk.Label(top, text="Watermark").pack(side="left")
         self.wm_label = ttk.Label(top, width=28, relief="groove", padding=(6, 2))
@@ -417,6 +426,23 @@ class App(tk.Tk):
             self.render()
             self.save_config()
 
+    def _parse_max_kb(self) -> int | None:
+        try:
+            kb = int(self.kb_var.get().strip())
+        except ValueError:
+            return None
+        return kb if 10 <= kb <= 50000 else None
+
+    def apply_max_kb(self) -> None:
+        kb = self._parse_max_kb()
+        if kb is None:
+            messagebox.showwarning("Dung lượng không hợp lệ", "Nhập số KB từ 10 đến 50000.")
+            self.kb_var.set(str(self.max_kb))
+            return
+        if kb != self.max_kb:
+            self.max_kb = kb
+            self.save_config()
+
     def pick_watermark(self) -> None:
         p = filedialog.askopenfilename(title="Chọn watermark (PNG)", filetypes=[("PNG", "*.png")])
         if p:
@@ -472,6 +498,7 @@ class App(tk.Tk):
     def export_all(self, auto: bool = False) -> None:
         """auto: export into this session's folder on the Desktop, wiping it first, then open it."""
         self.apply_width()
+        self.apply_max_kb()
         if not self.items:
             messagebox.showinfo("Chưa có ảnh", "Copy ảnh rồi nhấn Ctrl+V để thêm.")
             return
@@ -508,17 +535,18 @@ class App(tk.Tk):
             if auto:
                 empty_dir(out)
             too_big = 0
+            max_bytes = self.max_kb * 1024
             for i, item in enumerate(self.items, 1):
                 self.status.set(f"Đang xuất {i}/{len(self.items)}…")
                 self.update_idletasks()
-                if export_item(item, self.target_width, self.wm, out).stat().st_size > MAX_BYTES:
+                if export_item(item, self.target_width, self.wm, out, max_bytes).stat().st_size > max_bytes:
                     too_big += 1
         except OSError as e:
             messagebox.showerror("Lỗi khi xuất", str(e))
             return
         finally:
             self.configure(cursor="")
-        note = f" ({too_big} ảnh > {MAX_BYTES // 1024}KB)" if too_big else ""
+        note = f" ({too_big} ảnh > {self.max_kb}KB)" if too_big else ""
         self.status.set(f"Đã xuất {len(self.items)} ảnh.{note}")
         if auto or messagebox.askyesno("Xong", f"Đã xuất {len(self.items)} ảnh JPG.\nMở thư mục?"):
             os.startfile(out)  # type: ignore[attr-defined]
