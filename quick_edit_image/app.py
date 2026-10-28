@@ -119,6 +119,8 @@ class App(tk.Tk):
         ttk.Label(top, text="Watermark").pack(side="left")
         self.wm_label = ttk.Label(top, width=28, relief="groove", padding=(6, 2))
         self.wm_label.pack(side="left", padx=6)
+        self.wm_thumb_label = ttk.Label(top)
+        self.wm_thumb_label.pack(side="left", padx=(0, 6))
         ttk.Button(top, text="Đổi…", command=self.pick_watermark).pack(side="left")
         ttk.Button(top, text="Xuất tất cả", command=self.export_all).pack(side="right")
 
@@ -397,6 +399,23 @@ class App(tk.Tk):
     def _refresh_wm_label(self) -> None:
         p = self.wm_path.get()
         self.wm_label.configure(text=Path(p).name if p else "(chưa chọn)")
+        if self.wm is None:
+            self.wm_thumb = None
+            self.wm_thumb_label.configure(image="")
+            return
+        # Checkerboard behind the logo so transparent / white marks stay visible.
+        box = (48, 24)
+        mark = self.wm.copy()
+        mark.thumbnail(box, Image.Resampling.LANCZOS)
+        bg = Image.new("RGBA", box, "#ffffff")
+        draw = ImageDraw.Draw(bg)
+        for y in range(0, box[1], 6):
+            for x in range(0, box[0], 6):
+                if (x + y) // 6 % 2:
+                    draw.rectangle((x, y, x + 5, y + 5), fill="#d8d8d8")
+        bg.alpha_composite(mark, ((box[0] - mark.width) // 2, (box[1] - mark.height) // 2))
+        self.wm_thumb = ImageTk.PhotoImage(bg)
+        self.wm_thumb_label.configure(image=self.wm_thumb)
 
     def pick_out_dir(self) -> None:
         d = filedialog.askdirectory(title="Thư mục xuất ảnh", initialdir=self.out_dir.get() or None)

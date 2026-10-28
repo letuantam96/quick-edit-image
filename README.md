@@ -5,7 +5,7 @@ Quick edit image tool for Thanh Hang — paste ảnh, tự resize, đóng logo w
 ## Cách dùng
 
 1. Điền **chiều rộng** (px). Mọi ảnh sẽ được resize về đúng chiều rộng này (phóng to nếu ảnh nhỏ hơn), chiều cao giữ tỉ lệ.
-2. Bấm **Đổi…** để chọn watermark (file PNG, nên nền trong suốt). Watermark dùng chung cho tất cả ảnh.
+2. Bấm **Đổi…** để chọn watermark (file PNG, nên nền trong suốt). Watermark dùng chung cho tất cả ảnh. Ảnh preview nhỏ của watermark hiện ngay cạnh tên file.
 3. Copy ảnh (từ web, Zalo, Photoshop, hoặc copy file trong Explorer) rồi bấm nút **Paste ảnh từ bộ nhớ** (hoặc nhấn **Ctrl+V**) trong app. Ảnh được thêm vào danh sách và có watermark ngay. Nút **Xoá tất cả ảnh** phía trên danh sách xoá hết ảnh (có hỏi lại trước).
 4. Kéo watermark để đổi vị trí, kéo 4 góc để phóng to / thu nhỏ. Thumbnail ở danh sách bên trái cập nhật theo ngay. Ảnh paste tiếp theo sẽ dùng vị trí và cỡ watermark của lần chỉnh gần nhất.
 5. Gõ **tên file** cho từng ảnh (chọn ảnh ở danh sách bên trái). Bấm icon **thùng rác** ở mỗi dòng (hoặc phím Delete) để bỏ ảnh. Số thứ tự (vd. `2/7`) nằm ngay dưới thùng rác.
