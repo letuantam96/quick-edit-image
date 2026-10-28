@@ -39,7 +39,7 @@ pip install pyinstaller
 ```
 
 ```bash
-pyinstaller --onefile --windowed --name QuickEditImage run.py
+pyinstaller --onefile --windowed --name QuickEditImage --icon quick_edit_image/assets/icon.ico --add-data "quick_edit_image/assets;quick_edit_image/assets" run.py
 ```
 
 File chạy nằm ở `dist/QuickEditImage.exe`.
@@ -48,5 +48,6 @@ File chạy nằm ở `dist/QuickEditImage.exe`.
 
 - `quick_edit_image/core.py` — resize, ghép watermark, đọc clipboard, kiểm tra tên, xuất file.
 - `quick_edit_image/app.py` — giao diện Tkinter.
+- `quick_edit_image/assets/` — icon app (`icon.ico`, `icon.png`).
 - `run.py` — điểm khởi chạy.
 - `QuickEditImage.bat` — bấm đúp để mở app.

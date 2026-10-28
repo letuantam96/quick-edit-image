@@ -16,6 +16,7 @@ from .core import (AUTO_STAMP, Item, Placement, auto_root, clamp_placement, clea
                    clean_name)
 
 CONFIG_PATH = Path.home() / ".quick_edit_image.json"
+ASSETS = Path(__file__).parent / "assets"
 THUMB = (120, 90)
 HANDLE = 6  # half size of the corner handles, in screen px
 ACCENT = "#2f6fdf"
@@ -45,6 +46,10 @@ class App(tk.Tk):
         self.title("Quick Edit Image")
         self.geometry("1250x800")
         self.minsize(860, 560)
+        if os.name == "nt":
+            self.iconbitmap(default=str(ASSETS / "icon.ico"))
+        else:
+            self.iconphoto(True, tk.PhotoImage(file=str(ASSETS / "icon.png")))
 
         cfg = self._load_config()
         self.items: list[Item] = []
@@ -83,10 +88,23 @@ class App(tk.Tk):
         self.refresh_all()
         self.after(200, self.bring_to_front)
 
+    def _sharp_taskbar_icon(self) -> None:
+        """The taskbar shrinks Tk's 32 px icon to 24 px, which blurs it. Hand it the 24 px frame instead."""
+        import ctypes
+        user32 = ctypes.windll.user32
+        user32.LoadImageW.restype = ctypes.c_void_p
+        user32.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p]
+        size = user32.GetSystemMetrics(49) * 3 // 2  # SM_CXSMICON * 1.5 = taskbar icon size
+        icon = user32.LoadImageW(None, str(ASSETS / "icon.ico"), 1, size, size, 0x10)  # IMAGE_ICON, LR_LOADFROMFILE
+        if icon:
+            user32.SendMessageW(int(self.wm_frame(), 16), 0x80, 1, icon)  # WM_SETICON, ICON_BIG
+
     def bring_to_front(self) -> None:
         # Launched from a .bat via pythonw, Windows won't give us focus and the
         # window opens behind Explorer; briefly going topmost pulls it forward.
         self.deiconify()
+        if os.name == "nt":
+            self._sharp_taskbar_icon()  # only sticks once the window is mapped
         self.lift()
         self.attributes("-topmost", True)
         self.focus_force()
@@ -637,4 +655,8 @@ class App(tk.Tk):
 
 
 def main() -> None:
+    if os.name == "nt":
+        # Own taskbar group, so Windows shows our icon instead of python's.
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("QuickEditImage")
     App().mainloop()
