@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import io
 import os
 import re
 import shutil
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from PIL import Image, ImageGrab
 
-INVALID_NAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tif", ".tiff"}
 
 
@@ -110,18 +111,25 @@ def name_problem(name: str, all_names: list[str]) -> str | None:
     name = clean_name(name)
     if not name:
         return "Chưa đặt tên"
-    if INVALID_NAME_CHARS.search(name):
-        return 'Tên chứa ký tự không hợp lệ (< > : " / \\ | ? *)'
-    if sum(clean_name(n).lower() == name.lower() for n in all_names) > 1:
+    if sum(clean_name(n) == name for n in all_names) > 1:
         return "Tên bị trùng"
     return None
 
 
+def slugify(text: str) -> str:
+    """'Đây là Tên file' -> 'day-la-ten-file'. Keeps a trailing '-' so a space being typed isn't eaten."""
+    text = text.replace("đ", "d").replace("Đ", "D")
+    text = "".join(c for c in unicodedata.normalize("NFD", text) if not unicodedata.combining(c))
+    text = re.sub(r"[^a-z0-9]+", "-", text.lower())
+    return text.lstrip("-")
+
+
 def clean_name(name: str) -> str:
     name = name.strip()
-    if name.lower().endswith(".png"):
-        name = name[:-4].rstrip()
-    return name
+    for ext in (".jpg", ".jpeg", ".png"):
+        if name.lower().endswith(ext):
+            name = name[:-len(ext)]
+    return slugify(name).strip("-")
 
 
 AUTO_DIR_NAME = "QuickEditImage"
@@ -166,7 +174,39 @@ def empty_dir(path: Path) -> None:
             p.unlink()
 
 
+EXPORT_EXT = ".jpg"
+MAX_BYTES = 100 * 1024
+MIN_QUALITY = 30
+
+
+def encode_jpeg(img: Image.Image, max_bytes: int = MAX_BYTES) -> bytes:
+    """Highest JPEG quality that fits max_bytes; falls back to MIN_QUALITY if nothing fits."""
+    if img.mode != "RGB":
+        flat = Image.new("RGB", img.size, "white")  # JPEG has no alpha: transparent areas become white
+        flat.paste(img, mask=img.getchannel("A") if img.mode == "RGBA" else None)
+        img = flat
+
+    def encode(q: int) -> bytes:
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=q, optimize=True, progressive=True)
+        return buf.getvalue()
+
+    best = encode(95)
+    if len(best) <= max_bytes:
+        return best
+    lo, hi = MIN_QUALITY, 94
+    best = encode(lo)
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        data = encode(mid)
+        if len(data) <= max_bytes:
+            best, lo = data, mid + 1
+        else:
+            hi = mid - 1
+    return best
+
+
 def export_item(item: Item, width: int, wm: Image.Image | None, out_dir: Path) -> Path:
-    dst = out_dir / (clean_name(item.name) + ".png")
-    compose(item.resized(width), wm, item.placement).save(dst)
+    dst = out_dir / (clean_name(item.name) + EXPORT_EXT)
+    dst.write_bytes(encode_jpeg(compose(item.resized(width), wm, item.placement)))
     return dst

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
@@ -13,7 +14,7 @@ from PIL import Image, ImageDraw, ImageTk
 
 from .core import (AUTO_STAMP, Item, Placement, auto_root, clamp_placement, clean_old_auto_dirs, compose,
                    empty_dir, export_item, grab_clipboard_images, load_watermark, name_problem, watermark_box,
-                   clean_name)
+                   clean_name, slugify, EXPORT_EXT, MAX_BYTES)
 
 CONFIG_PATH = Path.home() / ".quick_edit_image.json"
 ASSETS = Path(__file__).parent / "assets"
@@ -189,7 +190,7 @@ class App(tk.Tk):
         self.name_lbl.pack(side="left")
         self.name_entry = tk.Entry(name_bar, textvariable=self.name_var, relief="solid", borderwidth=1)
         self.name_entry.pack(side="left", fill="x", expand=True, padx=6, ipady=3)
-        ttk.Label(name_bar, text=".png").pack(side="left")
+        ttk.Label(name_bar, text=EXPORT_EXT).pack(side="left")
         self.name_var.trace_add("write", lambda *_: self.on_name_change())
 
         self.canvas = tk.Canvas(right, background="#e9e9e9", highlightthickness=0)
@@ -331,7 +332,15 @@ class App(tk.Tk):
         item = self.current()
         if getattr(self, "_loading_name", False) or item is None:
             return
-        item.name = self.name_var.get()
+        text = self.name_var.get()
+        slug = slugify(re.sub(r"\.(jpe?g|png)$", "", text, flags=re.IGNORECASE))
+        if slug != text:
+            # Rewrite as "day-la-ten-file", keeping the cursor after the same character.
+            cursor = self.name_entry.index("insert")
+            self.name_var.set(slug)  # Tk doesn't re-fire the trace from inside it
+            self.name_entry.icursor(min(len(slug), len(slugify(text[:cursor]))))
+            text = slug
+        item.name = text
         self.flashing.discard(self.selected)
         self.update_row(self.selected)
         self._paint_name_field()
@@ -488,8 +497,8 @@ class App(tk.Tk):
                     return
             out = Path(self.out_dir.get())
             out.mkdir(parents=True, exist_ok=True)
-            existing = [clean_name(it.name) + ".png" for it in self.items
-                        if (out / (clean_name(it.name) + ".png")).exists()]
+            existing = [clean_name(it.name) + EXPORT_EXT for it in self.items
+                        if (out / (clean_name(it.name) + EXPORT_EXT)).exists()]
             if existing and not messagebox.askyesno(
                     "Ghi đè?", f"{len(existing)} file đã có trong thư mục, ví dụ {existing[0]}.\nGhi đè?"):
                 return
@@ -498,17 +507,20 @@ class App(tk.Tk):
         try:
             if auto:
                 empty_dir(out)
+            too_big = 0
             for i, item in enumerate(self.items, 1):
                 self.status.set(f"Đang xuất {i}/{len(self.items)}…")
                 self.update_idletasks()
-                export_item(item, self.target_width, self.wm, out)
+                if export_item(item, self.target_width, self.wm, out).stat().st_size > MAX_BYTES:
+                    too_big += 1
         except OSError as e:
             messagebox.showerror("Lỗi khi xuất", str(e))
             return
         finally:
             self.configure(cursor="")
-        self.status.set(f"Đã xuất {len(self.items)} ảnh.")
-        if auto or messagebox.askyesno("Xong", f"Đã xuất {len(self.items)} ảnh PNG.\nMở thư mục?"):
+        note = f" ({too_big} ảnh > {MAX_BYTES // 1024}KB)" if too_big else ""
+        self.status.set(f"Đã xuất {len(self.items)} ảnh.{note}")
+        if auto or messagebox.askyesno("Xong", f"Đã xuất {len(self.items)} ảnh JPG.\nMở thư mục?"):
             os.startfile(out)  # type: ignore[attr-defined]
 
     def flash(self, rows: set[int], times: int = 6) -> None:
