@@ -15,7 +15,11 @@ App nhớ chiều rộng, watermark, thư mục xuất và vị trí watermark c
 
 ## Chạy
 
-Cần Python 3.10+.
+Cần Python 3.10+ (khi cài nhớ tick "Add python.exe to PATH").
+
+Cách dễ nhất: bấm đúp **`QuickEditImage.bat`**. Lần đầu nó tự cài Pillow, sau đó mở app (không hiện cửa sổ đen). Có thể chuột phải → Send to → Desktop (create shortcut) để mở từ Desktop.
+
+Hoặc chạy bằng terminal trong thư mục dự án:
 
 ```bash
 pip install -r requirements.txt
@@ -24,6 +28,8 @@ pip install -r requirements.txt
 ```bash
 python run.py
 ```
+
+Không chạy trực tiếp `quick_edit_image/app.py` — file này dùng import nội bộ nên sẽ báo lỗi.
 
 ## Đóng gói thành file .exe
 
@@ -42,3 +48,4 @@ File chạy nằm ở `dist/QuickEditImage.exe`.
 - `quick_edit_image/core.py` — resize, ghép watermark, đọc clipboard, kiểm tra tên, xuất file.
 - `quick_edit_image/app.py` — giao diện Tkinter.
 - `run.py` — điểm khởi chạy.
+- `QuickEditImage.bat` — bấm đúp để mở app.

@@ -60,6 +60,16 @@ class App(tk.Tk):
         self.bind("<Delete>", lambda e: None if isinstance(e.widget, (tk.Entry, ttk.Entry)) else self.delete_selected())
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.refresh_all()
+        self.after(200, self.bring_to_front)
+
+    def bring_to_front(self) -> None:
+        # Launched from a .bat via pythonw, Windows won't give us focus and the
+        # window opens behind Explorer; briefly going topmost pulls it forward.
+        self.deiconify()
+        self.lift()
+        self.attributes("-topmost", True)
+        self.focus_force()
+        self.after(300, lambda: self.attributes("-topmost", False))
 
     # ---------- config ----------
 
@@ -101,7 +111,7 @@ class App(tk.Tk):
         body.pack(fill="both", expand=True)
 
         # Left: pasted images
-        left = ttk.Frame(body, width=230, padding=8)
+        left = ttk.Frame(body, width=340, padding=8)
         left.pack(side="left", fill="y")
         left.pack_propagate(False)
         self.count_lbl = ttk.Label(left, foreground="#666")
