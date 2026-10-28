@@ -8,13 +8,13 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from PIL import Image, ImageTk
+from PIL import Image, ImageDraw, ImageTk
 
-from .core import (Item, Placement, clamp_placement, export_item, grab_clipboard_images,
+from .core import (Item, Placement, clamp_placement, compose, export_item, grab_clipboard_images,
                    load_watermark, name_problem, watermark_box, clean_name)
 
 CONFIG_PATH = Path.home() / ".quick_edit_image.json"
-THUMB = (48, 36)
+THUMB = (120, 90)
 HANDLE = 6  # half size of the corner handles, in screen px
 ACCENT = "#2f6fdf"
 ERROR_BG = "#f8d0d0"
@@ -22,11 +22,26 @@ SELECTED_BG = "#dce8fb"
 ROW_BG = "#ffffff"
 
 
+def trash_icon(color: str, size: int = 18) -> ImageTk.PhotoImage:
+    # Drawn at 4x and downsampled for smooth edges.
+    k = 4
+    s = size * k
+    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    w = 2 * k
+    d.rectangle((7 * k, 1 * k, 11 * k, 3 * k), outline=color, width=w // 2)   # handle
+    d.line((2 * k, 4 * k, 16 * k, 4 * k), fill=color, width=w)               # lid
+    d.rounded_rectangle((4 * k, 6 * k, 14 * k, 17 * k), radius=k, outline=color, width=w)  # can
+    for x in (7, 9, 11):
+        d.line((x * k, 8 * k, x * k, 15 * k), fill=color, width=k)
+    return ImageTk.PhotoImage(img.resize((size, size), Image.Resampling.LANCZOS))
+
+
 class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Quick Edit Image")
-        self.geometry("1150x760")
+        self.geometry("1250x800")
         self.minsize(860, 560)
 
         cfg = self._load_config()
@@ -49,6 +64,7 @@ class App(tk.Tk):
         self.drag: dict | None = None
         self.rows: list[dict] = []
         self.flashing: set[int] = set()
+        self.trash_icons = (trash_icon("#8a8a8a"), trash_icon("#d03030"))  # normal, hover
 
         self._build_ui()
         if self.wm_path.get():
@@ -57,7 +73,7 @@ class App(tk.Tk):
 
         self.bind_all("<Control-v>", self.on_paste)
         self.bind_all("<Control-V>", self.on_paste)
-        self.bind("<Delete>", lambda e: None if isinstance(e.widget, (tk.Entry, ttk.Entry)) else self.delete_selected())
+        self.bind("<Delete>", lambda e: None if isinstance(e.widget, (tk.Entry, ttk.Entry)) else self.delete_item(self.selected))
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.refresh_all()
         self.after(200, self.bring_to_front)
@@ -111,7 +127,7 @@ class App(tk.Tk):
         body.pack(fill="both", expand=True)
 
         # Left: pasted images
-        left = ttk.Frame(body, width=340, padding=8)
+        left = ttk.Frame(body, width=440, padding=8)
         left.pack(side="left", fill="y")
         left.pack_propagate(False)
         self.count_lbl = ttk.Label(left, foreground="#666")
@@ -144,7 +160,6 @@ class App(tk.Tk):
         self.name_entry = tk.Entry(name_bar, textvariable=self.name_var, relief="solid", borderwidth=1)
         self.name_entry.pack(side="left", fill="x", expand=True, padx=6, ipady=3)
         ttk.Label(name_bar, text=".png").pack(side="left")
-        ttk.Button(name_bar, text="Xóa ảnh", command=self.delete_selected).pack(side="left", padx=(10, 0))
         self.name_var.trace_add("write", lambda *_: self.on_name_change())
 
         self.canvas = tk.Canvas(right, background="#e9e9e9", highlightthickness=0)
@@ -181,27 +196,42 @@ class App(tk.Tk):
             row = tk.Frame(self.list_frame, background=ROW_BG, highlightthickness=1,
                            highlightbackground="#ddd", padx=4, pady=4)
             row.pack(fill="x", pady=2, padx=1)
-            thumb = item.original.copy()
-            thumb.thumbnail(THUMB)
-            thumb_tk = ImageTk.PhotoImage(thumb)
-            tl = tk.Label(row, image=thumb_tk, width=THUMB[0], height=THUMB[1], background=ROW_BG)
+            r = item.resized(self.target_width)
+            thumb_base = r.copy()
+            thumb_base.thumbnail(THUMB)
+            tl = tk.Label(row, width=THUMB[0], height=THUMB[1], background=ROW_BG)
             tl.pack(side="left")
+            trash = tk.Label(row, image=self.trash_icons[0], background=ROW_BG, cursor="hand2", padx=6)
+            trash.pack(side="right")
+            trash.bind("<Button-1>", lambda _, i=i: self.delete_item(i))
+            trash.bind("<Enter>", lambda _, t=trash: t.configure(image=self.trash_icons[1]))
+            trash.bind("<Leave>", lambda _, t=trash: t.configure(image=self.trash_icons[0]))
             text = tk.Frame(row, background=ROW_BG)
-            text.pack(side="left", fill="x", padx=6)
+            text.pack(side="left", fill="x", expand=True, padx=6)
             name = tk.Label(text, anchor="w", background=ROW_BG)
             name.pack(fill="x")
-            r = item.resized(self.target_width)
             size = tk.Label(text, text=f"{r.width} × {r.height}", anchor="w", foreground="#888", background=ROW_BG)
             size.pack(fill="x")
-            entry = {"row": row, "widgets": [row, tl, text, name, size], "name": name, "thumb": thumb_tk}
+            entry = {"row": row, "widgets": [row, tl, text, name, size, trash], "name": name,
+                     "thumb_label": tl, "thumb_base": thumb_base, "thumb": None}
             self.rows.append(entry)
             for w in entry["widgets"]:
-                w.bind("<Button-1>", lambda _, i=i: self.select(i))
+                if w is not trash:
+                    w.bind("<Button-1>", lambda _, i=i: self.select(i))
                 w.bind("<MouseWheel>", self._on_list_wheel)
+            self.update_thumb(i)
             self.update_row(i)
         self.count_lbl.config(text=f"Ảnh đã paste ({len(self.items)})")
         n = len(self.items)
         self.status.set(f"Ảnh {self.selected + 1}/{n}" if self.selected is not None else "")
+
+    def update_thumb(self, i: int) -> None:
+        if i is None or i >= len(self.rows):
+            return
+        entry = self.rows[i]
+        thumb = compose(entry["thumb_base"], self.wm_preview, self.items[i].placement)
+        entry["thumb"] = ImageTk.PhotoImage(thumb)
+        entry["thumb_label"].configure(image=entry["thumb"])
 
     def update_row(self, i: int) -> None:
         if i >= len(self.rows):
@@ -278,12 +308,15 @@ class App(tk.Tk):
         self.name_entry.focus_set()
         return "break"
 
-    def delete_selected(self) -> None:
-        if self.selected is None:
+    def delete_item(self, i: int | None) -> None:
+        if i is None or i >= len(self.items):
             return
-        del self.items[self.selected]
-        self.flashing = {j - (j > self.selected) for j in self.flashing if j != self.selected}
-        self.selected = min(self.selected, len(self.items) - 1) if self.items else None
+        del self.items[i]
+        self.flashing = {j - (j > i) for j in self.flashing if j != i}
+        if self.selected is not None and (self.selected > i or self.selected >= len(self.items)):
+            self.selected -= 1
+        if not self.items:
+            self.selected = None
         self.refresh_all()
 
     def _parse_width(self) -> int | None:
@@ -326,6 +359,8 @@ class App(tk.Tk):
         self.wm_path.set(path)
         self._refresh_wm_label()
         self.render()
+        for i in range(len(self.rows)):
+            self.update_thumb(i)
         self.save_config()
 
     def _refresh_wm_label(self) -> None:
@@ -510,6 +545,7 @@ class App(tk.Tk):
             p = Placement((left_screen - ox) / s / W, (top_screen - oy) / s / H, w_screen / s / W)
         item.placement = clamp_placement(p, img.size, self.wm.size)
         self.render_mark()
+        self.update_thumb(self.selected)
 
     def on_release(self, _e) -> None:
         if self.drag and self.current():
