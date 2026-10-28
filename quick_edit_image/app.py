@@ -5,13 +5,15 @@ from __future__ import annotations
 import json
 import os
 import tkinter as tk
+from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageDraw, ImageTk
 
-from .core import (Item, Placement, clamp_placement, compose, export_item, grab_clipboard_images,
-                   load_watermark, name_problem, watermark_box, clean_name)
+from .core import (AUTO_STAMP, Item, Placement, auto_root, clamp_placement, clean_old_auto_dirs, compose,
+                   empty_dir, export_item, grab_clipboard_images, load_watermark, name_problem, watermark_box,
+                   clean_name)
 
 CONFIG_PATH = Path.home() / ".quick_edit_image.json"
 THUMB = (120, 90)
@@ -54,6 +56,9 @@ class App(tk.Tk):
         self.wm: Image.Image | None = None
         self.wm_preview: Image.Image | None = None  # downsized copy for fast redraw while dragging
         self.out_dir = tk.StringVar(value=cfg.get("out_dir", ""))
+        # One auto-export folder per session: the app opening, or "Xoá tất cả ảnh".
+        self.auto_dir_var = tk.StringVar()
+        self.new_auto_session()
         self.name_var = tk.StringVar()
         self.status = tk.StringVar()
 
@@ -184,7 +189,10 @@ class App(tk.Tk):
         ttk.Label(bottom, textvariable=self.out_dir).pack(side="left", padx=6)
         ttk.Button(bottom, text="Chọn thư mục…", command=self.pick_out_dir).pack(side="left")
         ttk.Button(bottom, text="Xuất vào thư mục", command=self.export_all).pack(side="left", padx=(6, 0))
-        ttk.Label(bottom, textvariable=self.status, foreground="#666").pack(side="right")
+        ttk.Button(bottom, text="Xuất tự động", command=lambda: self.export_all(auto=True)).pack(side="right")
+        ttk.Label(bottom, textvariable=self.auto_dir_var).pack(side="right", padx=6)
+        ttk.Label(bottom, text="Xuất vào:", foreground="#666").pack(side="right")
+        ttk.Label(bottom, textvariable=self.status, foreground="#666").pack(side="left", padx=(12, 0))
 
     def _list_fits(self) -> bool:
         return self.list_frame.winfo_reqheight() <= self.list_canvas.winfo_height()
@@ -278,7 +286,9 @@ class App(tk.Tk):
         if i is not None and i < len(self.rows):
             self.after_idle(lambda: self._scroll_into_view(i))
 
-    def _scroll_into_view(self, i: int) -> None:
+    def _scroll_into_view(self, i: int | None) -> None:
+        if i is None or i >= len(self.rows):  # list changed before this idle callback ran
+            return
         row = self.rows[i]["row"]
         total = max(1, self.list_frame.winfo_height())
         top, bottom = row.winfo_y() / total, (row.winfo_y() + row.winfo_height()) / total
@@ -340,6 +350,15 @@ class App(tk.Tk):
         self.flashing.clear()
         self.selected = None
         self.refresh_all()
+        self.new_auto_session()
+
+    def new_auto_session(self) -> None:
+        """Start a fresh auto-export folder named by the current time."""
+        now = datetime.now()
+        root = auto_root()
+        self.auto_dir = root / now.strftime(AUTO_STAMP)
+        self.auto_dir_var.set(self.auto_dir.as_posix())
+        clean_old_auto_dirs(root, now)
 
     def delete_item(self, i: int | None) -> None:
         if i is None or i >= len(self.items):
@@ -423,7 +442,8 @@ class App(tk.Tk):
             self.out_dir.set(d)
             self.save_config()
 
-    def export_all(self) -> None:
+    def export_all(self, auto: bool = False) -> None:
+        """auto: export into this session's folder on the Desktop, wiping it first, then open it."""
         self.apply_width()
         if not self.items:
             messagebox.showinfo("Chưa có ảnh", "Copy ảnh rồi nhấn Ctrl+V để thêm.")
@@ -441,19 +461,25 @@ class App(tk.Tk):
             return
         if self.wm is None and not messagebox.askyesno("Chưa có watermark", "Chưa chọn watermark. Vẫn xuất ảnh?"):
             return
-        if not self.out_dir.get():
-            self.pick_out_dir()
+        if auto:
+            out = self.auto_dir
+        else:
             if not self.out_dir.get():
+                self.pick_out_dir()
+                if not self.out_dir.get():
+                    return
+            out = Path(self.out_dir.get())
+            out.mkdir(parents=True, exist_ok=True)
+            existing = [clean_name(it.name) + ".png" for it in self.items
+                        if (out / (clean_name(it.name) + ".png")).exists()]
+            if existing and not messagebox.askyesno(
+                    "Ghi đè?", f"{len(existing)} file đã có trong thư mục, ví dụ {existing[0]}.\nGhi đè?"):
                 return
-        out = Path(self.out_dir.get())
-        out.mkdir(parents=True, exist_ok=True)
-        existing = [clean_name(it.name) + ".png" for it in self.items if (out / (clean_name(it.name) + ".png")).exists()]
-        if existing and not messagebox.askyesno(
-                "Ghi đè?", f"{len(existing)} file đã có trong thư mục, ví dụ {existing[0]}.\nGhi đè?"):
-            return
         self.configure(cursor="watch")
         self.update_idletasks()
         try:
+            if auto:
+                empty_dir(out)
             for i, item in enumerate(self.items, 1):
                 self.status.set(f"Đang xuất {i}/{len(self.items)}…")
                 self.update_idletasks()
@@ -464,7 +490,7 @@ class App(tk.Tk):
         finally:
             self.configure(cursor="")
         self.status.set(f"Đã xuất {len(self.items)} ảnh.")
-        if messagebox.askyesno("Xong", f"Đã xuất {len(self.items)} ảnh PNG.\nMở thư mục?"):
+        if auto or messagebox.askyesno("Xong", f"Đã xuất {len(self.items)} ảnh PNG.\nMở thư mục?"):
             os.startfile(out)  # type: ignore[attr-defined]
 
     def flash(self, rows: set[int], times: int = 6) -> None:

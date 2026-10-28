@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import re
+import shutil
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from PIL import Image, ImageGrab
@@ -119,6 +122,48 @@ def clean_name(name: str) -> str:
     if name.lower().endswith(".png"):
         name = name[:-4].rstrip()
     return name
+
+
+AUTO_DIR_NAME = "QuickEditImage"
+AUTO_STAMP = "%Y%m%d-%H%M%S"
+AUTO_KEEP_DAYS = 14
+
+
+def desktop_dir() -> Path:
+    """The real Desktop folder, which may be redirected (e.g. into OneDrive)."""
+    if os.name == "nt":
+        import ctypes
+        buf = ctypes.create_unicode_buffer(260)
+        if ctypes.windll.shell32.SHGetFolderPathW(None, 0x10, None, 0, buf) == 0:  # CSIDL_DESKTOPDIRECTORY
+            return Path(buf.value)
+    return Path.home() / "Desktop"
+
+
+def auto_root() -> Path:
+    return desktop_dir() / AUTO_DIR_NAME
+
+
+def clean_old_auto_dirs(root: Path, now: datetime, keep_days: int = AUTO_KEEP_DAYS) -> None:
+    """Delete auto-export folders older than keep_days. Only touches folders named like a timestamp."""
+    if not root.is_dir():
+        return
+    for d in root.iterdir():
+        try:
+            made = datetime.strptime(d.name, AUTO_STAMP)
+        except ValueError:
+            continue
+        if d.is_dir() and now - made > timedelta(days=keep_days):
+            shutil.rmtree(d, ignore_errors=True)
+
+
+def empty_dir(path: Path) -> None:
+    """Create the folder, or remove everything inside it if it already exists."""
+    path.mkdir(parents=True, exist_ok=True)
+    for p in path.iterdir():
+        if p.is_dir():
+            shutil.rmtree(p)
+        else:
+            p.unlink()
 
 
 def export_item(item: Item, width: int, wm: Image.Image | None, out_dir: Path) -> Path:
