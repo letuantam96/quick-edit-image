@@ -141,8 +141,9 @@ class App(tk.Tk):
         self.list_canvas.pack(side="left", fill="both", expand=True)
         self.list_frame = tk.Frame(self.list_canvas, background=ROW_BG)
         self.list_window = self.list_canvas.create_window((0, 0), window=self.list_frame, anchor="nw")
-        self.list_frame.bind("<Configure>", lambda _: self.list_canvas.configure(scrollregion=self.list_canvas.bbox("all")))
-        self.list_canvas.bind("<Configure>", lambda e: self.list_canvas.itemconfigure(self.list_window, width=e.width))
+        self.list_frame.bind("<Configure>", lambda _: self._update_list_scroll())
+        self.list_canvas.bind("<Configure>", lambda e: (
+            self.list_canvas.itemconfigure(self.list_window, width=e.width), self._update_list_scroll()))
         self.list_canvas.bind("<MouseWheel>", self._on_list_wheel)
         self.list_frame.bind("<MouseWheel>", self._on_list_wheel)
         tk.Label(left, text="Ctrl+V để thêm ảnh", foreground="#777", relief="groove",
@@ -178,8 +179,20 @@ class App(tk.Tk):
         ttk.Button(bottom, text="Chọn thư mục…", command=self.pick_out_dir).pack(side="left")
         ttk.Label(bottom, textvariable=self.status, foreground="#666").pack(side="right")
 
+    def _list_fits(self) -> bool:
+        return self.list_frame.winfo_reqheight() <= self.list_canvas.winfo_height()
+
+    def _update_list_scroll(self) -> None:
+        # A scrollregion smaller than the canvas still lets Tk scroll the rows
+        # around, so pin it to at least the visible height.
+        height = max(self.list_frame.winfo_reqheight(), self.list_canvas.winfo_height())
+        self.list_canvas.configure(scrollregion=(0, 0, self.list_canvas.winfo_width(), height))
+        if self._list_fits():
+            self.list_canvas.yview_moveto(0)
+
     def _on_list_wheel(self, e) -> None:
-        self.list_canvas.yview_scroll(-1 if e.delta > 0 else 1, "units")
+        if not self._list_fits():
+            self.list_canvas.yview_scroll(-1 if e.delta > 0 else 1, "units")
 
     # ---------- list ----------
 
@@ -201,8 +214,12 @@ class App(tk.Tk):
             thumb_base.thumbnail(THUMB)
             tl = tk.Label(row, width=THUMB[0], height=THUMB[1], background=ROW_BG)
             tl.pack(side="left")
-            trash = tk.Label(row, image=self.trash_icons[0], background=ROW_BG, cursor="hand2", padx=6)
-            trash.pack(side="right")
+            side = tk.Frame(row, background=ROW_BG)
+            side.pack(side="right", padx=4)
+            trash = tk.Label(side, image=self.trash_icons[0], background=ROW_BG, cursor="hand2")
+            trash.pack()
+            index = tk.Label(side, text=f"{i + 1}/{len(self.items)}", foreground="#888", background=ROW_BG)
+            index.pack(pady=(4, 0))
             trash.bind("<Button-1>", lambda _, i=i: self.delete_item(i))
             trash.bind("<Enter>", lambda _, t=trash: t.configure(image=self.trash_icons[1]))
             trash.bind("<Leave>", lambda _, t=trash: t.configure(image=self.trash_icons[0]))
@@ -212,7 +229,7 @@ class App(tk.Tk):
             name.pack(fill="x")
             size = tk.Label(text, text=f"{r.width} × {r.height}", anchor="w", foreground="#888", background=ROW_BG)
             size.pack(fill="x")
-            entry = {"row": row, "widgets": [row, tl, text, name, size, trash], "name": name,
+            entry = {"row": row, "widgets": [row, tl, text, name, size, side, index, trash], "name": name,
                      "thumb_label": tl, "thumb_base": thumb_base, "thumb": None}
             self.rows.append(entry)
             for w in entry["widgets"]:
@@ -222,8 +239,7 @@ class App(tk.Tk):
             self.update_thumb(i)
             self.update_row(i)
         self.count_lbl.config(text=f"Ảnh đã paste ({len(self.items)})")
-        n = len(self.items)
-        self.status.set(f"Ảnh {self.selected + 1}/{n}" if self.selected is not None else "")
+        self.after_idle(self._update_list_scroll)
 
     def update_thumb(self, i: int) -> None:
         if i is None or i >= len(self.rows):
@@ -254,7 +270,6 @@ class App(tk.Tk):
         self.render()
         if i is not None and i < len(self.rows):
             self.after_idle(lambda: self._scroll_into_view(i))
-        self.status.set(f"Ảnh {i + 1}/{len(self.items)}" if i is not None else "")
 
     def _scroll_into_view(self, i: int) -> None:
         row = self.rows[i]["row"]
