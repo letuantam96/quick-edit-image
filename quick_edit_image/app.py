@@ -272,8 +272,11 @@ class App(tk.Tk):
             name.pack(fill="x")
             size = tk.Label(text, text=f"{r.width} × {r.height}", anchor="w", foreground="#888", background=ROW_BG)
             size.pack(fill="x")
-            entry = {"row": row, "widgets": [row, tl, text, name, size, side, index, trash], "name": name,
-                     "thumb_label": tl, "thumb_base": thumb_base, "thumb": None}
+            file_size = tk.Label(text, anchor="w", background=ROW_BG)
+            file_size.pack(fill="x")
+            entry = {"row": row, "widgets": [row, tl, text, name, size, file_size, side, index, trash],
+                     "name": name, "file_size": file_size, "thumb_label": tl, "thumb_base": thumb_base,
+                     "thumb": None}
             self.rows.append(entry)
             for w in entry["widgets"]:
                 if w is not trash:
@@ -302,6 +305,19 @@ class App(tk.Tk):
         entry["row"].configure(highlightbackground=ACCENT if i == self.selected else "#ddd")
         name = clean_name(item.name)
         entry["name"].configure(text=name or "(chưa đặt tên)", foreground="#222" if name else "#c0392b")
+        if item.exported_bytes is None:
+            entry["file_size"].configure(text="")
+        else:
+            over = item.exported_bytes > self.max_kb * 1024
+            entry["file_size"].configure(text=f"Đã xuất: {item.exported_bytes / 1024:.1f} KB",
+                                         foreground="#c0392b" if over else "#2e8b57")
+
+    def forget_exported(self, indices=None) -> None:
+        """The last export no longer matches what's on screen, so stop showing its file size."""
+        for i in range(len(self.items)) if indices is None else indices:
+            if self.items[i].exported_bytes is not None:
+                self.items[i].exported_bytes = None
+                self.update_row(i)
 
     def select(self, i: int | None) -> None:
         old = self.selected
@@ -422,6 +438,8 @@ class App(tk.Tk):
             return
         if w != self.target_width:
             self.target_width = w
+            for item in self.items:
+                item.exported_bytes = None
             self.rebuild_list()
             self.render()
             self.save_config()
@@ -442,6 +460,7 @@ class App(tk.Tk):
         if kb != self.max_kb:
             self.max_kb = kb
             self.save_config()
+            self.forget_exported()
 
     def pick_watermark(self) -> None:
         p = filedialog.askopenfilename(title="Chọn watermark (PNG)", filetypes=[("PNG", "*.png")])
@@ -466,6 +485,7 @@ class App(tk.Tk):
         self.render()
         for i in range(len(self.rows)):
             self.update_thumb(i)
+        self.forget_exported()
         self.save_config()
 
     def _refresh_wm_label(self) -> None:
@@ -539,8 +559,9 @@ class App(tk.Tk):
             for i, item in enumerate(self.items, 1):
                 self.status.set(f"Đang xuất {i}/{len(self.items)}…")
                 self.update_idletasks()
-                if export_item(item, self.target_width, self.wm, out, max_bytes).stat().st_size > max_bytes:
-                    too_big += 1
+                item.exported_bytes = export_item(item, self.target_width, self.wm, out, max_bytes).stat().st_size
+                too_big += item.exported_bytes > max_bytes
+                self.update_row(i - 1)
         except OSError as e:
             messagebox.showerror("Lỗi khi xuất", str(e))
             return
@@ -685,6 +706,7 @@ class App(tk.Tk):
         if self.drag and self.current():
             self.last_placement = self.current().placement.copy()
             self.save_config()
+            self.forget_exported([self.selected])
         self.drag = None
 
     def on_close(self) -> None:

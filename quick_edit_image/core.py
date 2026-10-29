@@ -36,6 +36,7 @@ class Item:
     original: Image.Image
     name: str = ""
     placement: Placement = field(default_factory=Placement)
+    exported_bytes: int | None = None  # file size of the last export
     _resized: tuple[int, Image.Image] | None = None
 
     def resized(self, width: int) -> Image.Image:
