@@ -35,10 +35,19 @@ Không chạy trực tiếp `quick_edit_image/app.py` — file này dùng import
 
 ## Đóng gói để gửi sang máy khác
 
-Bấm đúp **`build.bat`** (lần đầu tự cài PyInstaller). Kết quả:
+Bấm đúp **`build.bat`** (lần đầu tự cài PyInstaller). Đầu tiên nó hiện phiên bản hiện tại (góc phải toolbar, vd. `v1.0.0`) và hỏi có lên phiên bản mới không:
+
+1. Giữ nguyên
+2. Sửa lỗi nhỏ: `1.0.0` → `1.0.1`
+3. Thêm tính năng: `1.0.0` → `1.1.0`
+4. Thay đổi lớn: `1.0.0` → `2.0.0`
+
+Kết quả:
 
 - `dist/JokamQuimedit/` — thư mục app, chạy bằng `JokamQuimedit.exe` bên trong.
-- `dist/JokamQuimedit.zip` — bản nén của thư mục trên, dùng để gửi đi.
+- `dist/JokamQuimedit-<phiên bản>.zip` (vd. `JokamQuimedit-1.0.1.zip`) — bản nén của thư mục trên, dùng để gửi đi.
+
+Nếu đã lên phiên bản mới, nhớ commit file `quick_edit_image/__init__.py` (nơi lưu số phiên bản).
 
 Build dạng thư mục (không phải 1 file .exe) để app mở nhanh mỗi lần, không phải tự giải nén.
 
@@ -51,4 +60,5 @@ Trên máy nhận: Windows 10/11 64-bit, không cần cài Python. Giải nén `
 - `quick_edit_image/assets/` — icon app (`icon.ico`, `icon.png`).
 - `run.py` — điểm khởi chạy.
 - `JokamQuimedit.bat` — bấm đúp để mở app.
-- `build.bat` — đóng gói ra `dist/JokamQuimedit.zip`.
+- `build.bat` — hỏi lên phiên bản rồi đóng gói ra `dist/JokamQuimedit-<phiên bản>.zip`.
+- `bump_version.py` — đọc / tăng số phiên bản, `build.bat` dùng.
