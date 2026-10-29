@@ -18,6 +18,7 @@ from .core import (AUTO_STAMP, Item, Placement, auto_root, clamp_placement, clea
 
 CONFIG_PATH = Path.home() / ".quick_edit_image.json"
 ASSETS = Path(__file__).parent / "assets"
+DEFAULT_WIDTH = 700
 THUMB = (120, 90)
 HANDLE = 6  # half size of the corner handles, in screen px
 ACCENT = "#2f6fdf"
@@ -56,10 +57,10 @@ class App(tk.Tk):
         self.items: list[Item] = []
         self.selected: int | None = None
         self.last_placement = Placement(**cfg.get("placement", {}))
-        self.width_var = tk.StringVar(value=str(cfg.get("width", 1080)))
+        self.width_var = tk.StringVar(value=str(cfg.get("width", DEFAULT_WIDTH)))
         self.kb_var = tk.StringVar(value=str(cfg.get("max_kb", MAX_BYTES // 1024)))
         self.max_kb = self._parse_max_kb() or MAX_BYTES // 1024
-        self.target_width = self._parse_width() or 1080
+        self.target_width = self._parse_width() or DEFAULT_WIDTH
         self.wm_path = tk.StringVar(value=cfg.get("watermark", ""))
         self.wm: Image.Image | None = None
         self.wm_preview: Image.Image | None = None  # downsized copy for fast redraw while dragging
