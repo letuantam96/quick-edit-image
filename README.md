@@ -33,17 +33,16 @@ python run.py
 
 Không chạy trực tiếp `quick_edit_image/app.py` — file này dùng import nội bộ nên sẽ báo lỗi.
 
-## Đóng gói thành file .exe
+## Đóng gói để gửi sang máy khác
 
-```bash
-pip install pyinstaller
-```
+Bấm đúp **`build.bat`** (lần đầu tự cài PyInstaller). Kết quả:
 
-```bash
-pyinstaller --onefile --windowed --name JokamQuimedit --icon quick_edit_image/assets/icon.ico --add-data "quick_edit_image/assets;quick_edit_image/assets" run.py
-```
+- `dist/JokamQuimedit/` — thư mục app, chạy bằng `JokamQuimedit.exe` bên trong.
+- `dist/JokamQuimedit.zip` — bản nén của thư mục trên, dùng để gửi đi.
 
-File chạy nằm ở `dist/JokamQuimedit.exe`.
+Build dạng thư mục (không phải 1 file .exe) để app mở nhanh mỗi lần, không phải tự giải nén.
+
+Trên máy nhận: Windows 10/11 64-bit, không cần cài Python. Giải nén `.zip`, mở `JokamQuimedit.exe` (chuột phải → Send to → Desktop để tạo shortcut). Lần đầu Windows SmartScreen có thể cảnh báo vì app chưa ký số: bấm *More info* → *Run anyway*.
 
 ## Cấu trúc
 
@@ -52,3 +51,4 @@ File chạy nằm ở `dist/JokamQuimedit.exe`.
 - `quick_edit_image/assets/` — icon app (`icon.ico`, `icon.png`).
 - `run.py` — điểm khởi chạy.
 - `JokamQuimedit.bat` — bấm đúp để mở app.
+- `build.bat` — đóng gói ra `dist/JokamQuimedit.zip`.
