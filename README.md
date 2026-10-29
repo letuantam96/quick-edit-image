@@ -1,6 +1,6 @@
-# quick-edit-image
+# JokamQuimedit
 
-Quick edit image tool for Thanh Hang — paste ảnh, tự resize, đóng logo watermark, đặt tên rồi xuất JPG nén theo dung lượng chọn trước (mặc định 100KB).
+JOKAM Quick Image Edit for Thanh Hằng — paste ảnh, tự resize, đóng logo watermark, đặt tên rồi xuất JPG nén theo dung lượng chọn trước (mặc định 100KB).
 
 ## Cách dùng
 
@@ -11,7 +11,7 @@ Quick edit image tool for Thanh Hang — paste ảnh, tự resize, đóng logo w
 5. Kéo watermark để đổi vị trí, kéo 4 góc để phóng to / thu nhỏ. Thumbnail ở danh sách bên trái cập nhật theo ngay. Ảnh paste tiếp theo sẽ dùng vị trí và cỡ watermark của lần chỉnh gần nhất.
 6. Gõ **tên file** cho từng ảnh (chọn ảnh ở danh sách bên trái). Tên tự chuyển sang dạng `day-la-ten-file` ngay khi gõ / paste: tiếng Việt bỏ dấu, chữ thường, dấu cách và ký tự đặc biệt thành `-`. Bấm icon **thùng rác** ở mỗi dòng (hoặc phím Delete) để bỏ ảnh. Số thứ tự (vd. `2/7`) nằm ngay dưới thùng rác.
 7. Ảnh xuất ra là **JPG**, app tự chọn chất lượng cao nhất mà file vẫn không vượt dung lượng tối ưu (phần trong suốt thành nền trắng). Ảnh quá chi tiết không nén xuống được sẽ được báo ở thanh trạng thái. Chọn thư mục ở thanh dưới, bấm **Xuất vào thư mục** ngay cạnh nút Chọn thư mục. Ảnh chưa đặt tên, hoặc trùng tên sẽ nháy đỏ và không xuất cho đến khi sửa.
-8. Hoặc bấm **Xuất tự động** (góc dưới bên phải): app xuất vào `Desktop/QuickEditImage/<NămThángNgày-GiờPhútGiây>` (thời điểm mở app, hoặc lúc bấm **Xoá tất cả ảnh** — coi như phiên mới), xoá sạch file cũ trong thư mục đó trước khi xuất, xuất xong tự mở thư mục. Các thư mục tự động cũ hơn 2 tuần được tự xoá khi mở app.
+8. Hoặc bấm **Xuất tự động** (góc dưới bên phải): app xuất vào `Desktop/JokamQuimedit/<NămThángNgày-GiờPhútGiây>` (thời điểm mở app, hoặc lúc bấm **Xoá tất cả ảnh** — coi như phiên mới), xoá sạch file cũ trong thư mục đó trước khi xuất, xuất xong tự mở thư mục. Các thư mục tự động cũ hơn 2 tuần được tự xoá khi mở app.
 
 App nhớ chiều rộng, dung lượng tối ưu, watermark, thư mục xuất và vị trí watermark cho lần mở sau (`~/.quick_edit_image.json`).
 
@@ -19,7 +19,7 @@ App nhớ chiều rộng, dung lượng tối ưu, watermark, thư mục xuất 
 
 Cần Python 3.10+ (khi cài nhớ tick "Add python.exe to PATH").
 
-Cách dễ nhất: bấm đúp **`QuickEditImage.bat`**. Lần đầu nó tự cài Pillow, sau đó mở app (không hiện cửa sổ đen). Có thể chuột phải → Send to → Desktop (create shortcut) để mở từ Desktop.
+Cách dễ nhất: bấm đúp **`JokamQuimedit.bat`**. Lần đầu nó tự cài Pillow, sau đó mở app (không hiện cửa sổ đen). Có thể chuột phải → Send to → Desktop (create shortcut) để mở từ Desktop.
 
 Hoặc chạy bằng terminal trong thư mục dự án:
 
@@ -40,10 +40,10 @@ pip install pyinstaller
 ```
 
 ```bash
-pyinstaller --onefile --windowed --name QuickEditImage --icon quick_edit_image/assets/icon.ico --add-data "quick_edit_image/assets;quick_edit_image/assets" run.py
+pyinstaller --onefile --windowed --name JokamQuimedit --icon quick_edit_image/assets/icon.ico --add-data "quick_edit_image/assets;quick_edit_image/assets" run.py
 ```
 
-File chạy nằm ở `dist/QuickEditImage.exe`.
+File chạy nằm ở `dist/JokamQuimedit.exe`.
 
 ## Cấu trúc
 
@@ -51,4 +51,4 @@ File chạy nằm ở `dist/QuickEditImage.exe`.
 - `quick_edit_image/app.py` — giao diện Tkinter.
 - `quick_edit_image/assets/` — icon app (`icon.ico`, `icon.png`).
 - `run.py` — điểm khởi chạy.
-- `QuickEditImage.bat` — bấm đúp để mở app.
+- `JokamQuimedit.bat` — bấm đúp để mở app.

@@ -44,7 +44,7 @@ def trash_icon(color: str, size: int = 18) -> ImageTk.PhotoImage:
 class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Quick Edit Image")
+        self.title("JokamQuimedit - JOKAM Quick Image Edit for Thanh Hằng")
         self.geometry("1250x800")
         self.minsize(860, 560)
         if os.name == "nt":
@@ -698,5 +698,5 @@ def main() -> None:
     if os.name == "nt":
         # Own taskbar group, so Windows shows our icon instead of python's.
         import ctypes
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("QuickEditImage")
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("JokamQuimedit")
     App().mainloop()

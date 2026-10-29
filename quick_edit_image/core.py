@@ -132,7 +132,7 @@ def clean_name(name: str) -> str:
     return slugify(name).strip("-")
 
 
-AUTO_DIR_NAME = "QuickEditImage"
+AUTO_DIR_NAME = "JokamQuimedit"
 AUTO_STAMP = "%Y%m%d-%H%M%S"
 AUTO_KEEP_DAYS = 14
 

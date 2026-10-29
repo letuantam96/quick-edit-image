@@ -1,5 +1,5 @@
 @echo off
-rem Double-click to open Quick Edit Image.
+rem Double-click to open JokamQuimedit.
 cd /d "%~dp0"
 
 where python >nul 2>nul || (

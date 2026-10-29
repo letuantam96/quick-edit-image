@@ -1,1 +1,1 @@
-"""Quick Edit Image - batch watermark tool."""
+"""JokamQuimedit - JOKAM Quick Image Edit for Thanh Hằng."""
