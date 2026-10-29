@@ -12,6 +12,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageDraw, ImageTk
 
+from . import __version__
 from .core import (AUTO_STAMP, Item, Placement, auto_root, clamp_placement, clean_old_auto_dirs, compose,
                    empty_dir, export_item, grab_clipboard_images, load_watermark, name_problem, watermark_box,
                    clean_name, slugify, EXPORT_EXT, MAX_BYTES)
@@ -197,6 +198,7 @@ class App(tk.Tk):
         self.wm_thumb_label = ttk.Label(top)
         self.wm_thumb_label.pack(side="left", padx=(0, 6))
         ttk.Button(top, text="Đổi…", command=self.pick_watermark).pack(side="left")
+        ttk.Label(top, text=f"v{__version__}", foreground="#666").pack(side="right")
 
         ttk.Separator(self).pack(fill="x")
         body = ttk.Frame(self)
