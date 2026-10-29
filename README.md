@@ -59,7 +59,7 @@ Mỗi lần mở, app hỏi ngầm GitHub bản Release mới nhất của repo.
 
 Build dạng thư mục (không phải 1 file .exe) để app mở nhanh mỗi lần, không phải tự giải nén.
 
-Trên máy nhận: Windows 10/11 64-bit, không cần cài Python. Giải nén `.zip`, mở `JokamQuimedit.exe` (chuột phải → Send to → Desktop để tạo shortcut). Lần đầu Windows SmartScreen có thể cảnh báo vì app chưa ký số: bấm *More info* → *Run anyway*.
+Trên máy nhận: Windows 10/11 64-bit, không cần cài Python. App hiển thị nét ở mọi mức scale màn hình của Windows (100%, 125%, 150%…): chữ, nút, thumbnail tự to theo. Giải nén `.zip`, mở `JokamQuimedit.exe` (chuột phải → Send to → Desktop để tạo shortcut). Lần đầu Windows SmartScreen có thể cảnh báo vì app chưa ký số: bấm *More info* → *Run anyway*.
 
 ## Cấu trúc
 

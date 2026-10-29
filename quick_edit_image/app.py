@@ -23,17 +23,23 @@ CONFIG_PATH = Path.home() / ".quick_edit_image.json"
 ASSETS = Path(__file__).parent / "assets"
 DEFAULT_WIDTH = 700
 THUMB = (120, 90)
-HANDLE = 6  # half size of the corner handles, in screen px
+HANDLE = 6  # half size of the corner handles, in screen px at 100% scaling
+SCALE = 1.0  # Windows display scaling (1.5 at 150%), set once the window exists
 ACCENT = "#2f6fdf"
 ERROR_BG = "#f8d0d0"
 SELECTED_BG = "#dce8fb"
 ROW_BG = "#ffffff"
 
 
+def px(n: float) -> int:
+    """A size laid out for 100% scaling, in real screen pixels."""
+    return round(n * SCALE)
+
+
 def trash_icon(color: str, size: int = 18) -> ImageTk.PhotoImage:
-    # Drawn at 4x and downsampled for smooth edges.
+    # Drawn on an 18-unit grid at 4x, then downsampled to size for smooth edges.
     k = 4
-    s = size * k
+    s = 18 * k
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     w = 2 * k
@@ -48,8 +54,10 @@ def trash_icon(color: str, size: int = 18) -> ImageTk.PhotoImage:
 class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
+        global SCALE
+        SCALE = round(self.winfo_fpixels("1i") / 96, 2)
         self.title("JokamQuimedit - JOKAM Quick Image Edit for Thanh Hằng")
-        self.minsize(860, 560)
+        self.minsize(px(860), px(560))
         if os.name == "nt":
             self.iconbitmap(default=str(ASSETS / "icon.ico"))
         else:
@@ -57,10 +65,12 @@ class App(tk.Tk):
 
         cfg = self._load_config()
         self.window_geom = cfg.get("window", "")
+        if cfg.get("window_scale", 1.0) != SCALE:  # saved under other display scaling: pixels mean another size
+            self.window_geom = ""
         if self._on_screen(self.window_geom):
             self.geometry(self.window_geom)
         else:  # first run, or the screen it was on is gone
-            self._center(1250, 800)
+            self._center(px(1250), px(800))
         if cfg.get("maximized"):
             self.state("zoomed")
         self.items: list[Item] = []
@@ -87,7 +97,7 @@ class App(tk.Tk):
         self.drag: dict | None = None
         self.rows: list[dict] = []
         self.flashing: set[int] = set()
-        self.trash_icons = (trash_icon("#8a8a8a"), trash_icon("#d03030"))  # normal, hover
+        self.trash_icons = (trash_icon("#8a8a8a", px(18)), trash_icon("#d03030", px(18)))  # normal, hover
 
         self._build_ui()
         if self.wm_path.get():
@@ -111,9 +121,9 @@ class App(tk.Tk):
             rect = wintypes.RECT()
             if ctypes.windll.user32.SystemParametersInfoW(0x30, 0, ctypes.byref(rect), 0):  # SPI_GETWORKAREA
                 left, top, right, bottom = rect.left, rect.top, rect.right, rect.bottom
-        title_bar = 31  # frame around Tk's client area, which geometry() sizes
-        w = min(w, right - left - 16)
-        h = min(h, bottom - top - title_bar - 8)
+        title_bar = px(31)  # frame around Tk's client area, which geometry() sizes
+        w = min(w, right - left - px(16))
+        h = min(h, bottom - top - title_bar - px(8))
         x = left + (right - left - w) // 2
         y = top + max(0, (bottom - top - h - title_bar) // 2)
         self.geometry(f"{w}x{h}+{x}+{y}")
@@ -168,7 +178,7 @@ class App(tk.Tk):
                 tag, url = result[0]
                 self.update_label.configure(text=f"Có bản mới {tag} - bấm để tải")
                 self.update_label.bind("<Button-1>", lambda _: webbrowser.open(url))
-                self.update_label.pack(side="right", padx=(0, 12))
+                self.update_label.pack(side="right", padx=(0, px(12)))
         self.after(300, poll)
 
     # ---------- config ----------
@@ -186,7 +196,7 @@ class App(tk.Tk):
             self.window_geom = self.geometry()
         cfg = {"width": self.target_width, "max_kb": self.max_kb, "watermark": self.wm_path.get(), "out_dir": self.out_dir.get(),
                "placement": {"x": p.x, "y": p.y, "scale": p.scale},
-               "window": self.window_geom, "maximized": maximized}
+               "window": self.window_geom, "window_scale": SCALE, "maximized": maximized}
         try:
             CONFIG_PATH.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
         except OSError:
@@ -195,27 +205,27 @@ class App(tk.Tk):
     # ---------- layout ----------
 
     def _build_ui(self) -> None:
-        top = ttk.Frame(self, padding=(10, 8))
+        top = ttk.Frame(self, padding=(px(10), px(8)))
         top.pack(fill="x")
         ttk.Label(top, text="Chiều rộng").pack(side="left")
         width_entry = ttk.Entry(top, textvariable=self.width_var, width=7, justify="right")
-        width_entry.pack(side="left", padx=(6, 2))
+        width_entry.pack(side="left", padx=(px(6), px(2)))
         width_entry.bind("<Return>", lambda _: self.apply_width())
         width_entry.bind("<FocusOut>", lambda _: self.apply_width())
         ttk.Label(top, text="px").pack(side="left")
-        ttk.Separator(top, orient="vertical").pack(side="left", fill="y", padx=12)
+        ttk.Separator(top, orient="vertical").pack(side="left", fill="y", padx=px(12))
         ttk.Label(top, text="Dung lượng tối ưu").pack(side="left")
         kb_entry = ttk.Entry(top, textvariable=self.kb_var, width=6, justify="right")
-        kb_entry.pack(side="left", padx=(6, 2))
+        kb_entry.pack(side="left", padx=(px(6), px(2)))
         kb_entry.bind("<Return>", lambda _: self.apply_max_kb())
         kb_entry.bind("<FocusOut>", lambda _: self.apply_max_kb())
         ttk.Label(top, text="KB").pack(side="left")
-        ttk.Separator(top, orient="vertical").pack(side="left", fill="y", padx=12)
+        ttk.Separator(top, orient="vertical").pack(side="left", fill="y", padx=px(12))
         ttk.Label(top, text="Watermark").pack(side="left")
-        self.wm_label = ttk.Label(top, width=28, relief="groove", padding=(6, 2))
-        self.wm_label.pack(side="left", padx=6)
+        self.wm_label = ttk.Label(top, width=28, relief="groove", padding=(px(6), px(2)))
+        self.wm_label.pack(side="left", padx=px(6))
         self.wm_thumb_label = ttk.Label(top)
-        self.wm_thumb_label.pack(side="left", padx=(0, 6))
+        self.wm_thumb_label.pack(side="left", padx=(0, px(6)))
         ttk.Button(top, text="Đổi…", command=self.pick_watermark).pack(side="left")
         ttk.Label(top, text=f"v{__version__}", foreground="#666").pack(side="right")
         # Packed only once a newer release turns up (see check_for_update).
@@ -226,7 +236,7 @@ class App(tk.Tk):
         body.pack(fill="both", expand=True)
 
         # Left: pasted images
-        left = ttk.Frame(body, width=440, padding=8)
+        left = ttk.Frame(body, width=px(440), padding=px(8))
         left.pack(side="left", fill="y")
         left.pack_propagate(False)
         header = ttk.Frame(left)
@@ -235,7 +245,7 @@ class App(tk.Tk):
         self.count_lbl.pack(side="left")
         ttk.Button(header, text="Xoá tất cả ảnh", command=self.clear_all).pack(side="right")
         holder = ttk.Frame(left)
-        holder.pack(fill="both", expand=True, pady=6)
+        holder.pack(fill="both", expand=True, pady=px(6))
         self.list_canvas = tk.Canvas(holder, highlightthickness=0, background=ROW_BG)
         sb = ttk.Scrollbar(holder, orient="vertical", command=self.list_canvas.yview)
         self.list_canvas.configure(yscrollcommand=sb.set)
@@ -248,22 +258,22 @@ class App(tk.Tk):
             self.list_canvas.itemconfigure(self.list_window, width=e.width), self._update_list_scroll()))
         self.list_canvas.bind("<MouseWheel>", self._on_list_wheel)
         self.list_frame.bind("<MouseWheel>", self._on_list_wheel)
-        ttk.Style(self).configure("Paste.TButton", padding=(0, 8))
+        ttk.Style(self).configure("Paste.TButton", padding=(0, px(8)))
         ttk.Button(left, text="Paste ảnh từ bộ nhớ", style="Paste.TButton",
                    command=self.on_paste).pack(fill="x")
-        ttk.Label(left, text="hoặc ấn Ctrl + V để thêm ảnh", foreground="#888").pack(pady=(4, 0))
+        ttk.Label(left, text="hoặc ấn Ctrl + V để thêm ảnh", foreground="#888").pack(pady=(px(4), 0))
 
         ttk.Separator(body, orient="vertical").pack(side="left", fill="y")
 
         # Right: name bar + editor
         right = ttk.Frame(body)
         right.pack(side="left", fill="both", expand=True)
-        name_bar = ttk.Frame(right, padding=(10, 8))
+        name_bar = ttk.Frame(right, padding=(px(10), px(8)))
         name_bar.pack(fill="x")
         self.name_lbl = tk.Label(name_bar, text="Tên file")
         self.name_lbl.pack(side="left")
         self.name_entry = tk.Entry(name_bar, textvariable=self.name_var, relief="solid", borderwidth=1)
-        self.name_entry.pack(side="left", fill="x", expand=True, padx=6, ipady=3)
+        self.name_entry.pack(side="left", fill="x", expand=True, padx=px(6), ipady=px(3))
         ttk.Label(name_bar, text=EXPORT_EXT).pack(side="left")
         self.name_var.trace_add("write", lambda *_: self.on_name_change())
 
@@ -276,16 +286,16 @@ class App(tk.Tk):
         self.canvas.bind("<Motion>", self.on_hover)
 
         ttk.Separator(self).pack(fill="x")
-        bottom = ttk.Frame(self, padding=(10, 6))
+        bottom = ttk.Frame(self, padding=(px(10), px(6)))
         bottom.pack(fill="x")
         ttk.Label(bottom, text="Xuất vào:", foreground="#666").pack(side="left")
-        ttk.Label(bottom, textvariable=self.out_dir).pack(side="left", padx=6)
+        ttk.Label(bottom, textvariable=self.out_dir).pack(side="left", padx=px(6))
         ttk.Button(bottom, text="Chọn thư mục…", command=self.pick_out_dir).pack(side="left")
-        ttk.Button(bottom, text="Xuất vào thư mục", command=self.export_all).pack(side="left", padx=(6, 0))
+        ttk.Button(bottom, text="Xuất vào thư mục", command=self.export_all).pack(side="left", padx=(px(6), 0))
         ttk.Button(bottom, text="Xuất tự động", command=lambda: self.export_all(auto=True)).pack(side="right")
-        ttk.Label(bottom, textvariable=self.auto_dir_var).pack(side="right", padx=6)
+        ttk.Label(bottom, textvariable=self.auto_dir_var).pack(side="right", padx=px(6))
         ttk.Label(bottom, text="Xuất vào:", foreground="#666").pack(side="right")
-        ttk.Label(bottom, textvariable=self.status, foreground="#666").pack(side="left", padx=(12, 0))
+        ttk.Label(bottom, textvariable=self.status, foreground="#666").pack(side="left", padx=(px(12), 0))
 
     def _list_fits(self) -> bool:
         return self.list_frame.winfo_reqheight() <= self.list_canvas.winfo_height()
@@ -315,24 +325,25 @@ class App(tk.Tk):
         self.rows = []
         for i, item in enumerate(self.items):
             row = tk.Frame(self.list_frame, background=ROW_BG, highlightthickness=1,
-                           highlightbackground="#ddd", padx=4, pady=4)
-            row.pack(fill="x", pady=2, padx=1)
+                           highlightbackground="#ddd", padx=px(4), pady=px(4))
+            row.pack(fill="x", pady=px(2), padx=1)
             r = item.resized(self.target_width)
             thumb_base = r.copy()
-            thumb_base.thumbnail(THUMB)
-            tl = tk.Label(row, width=THUMB[0], height=THUMB[1], background=ROW_BG)
+            thumb_box = (px(THUMB[0]), px(THUMB[1]))
+            thumb_base.thumbnail(thumb_box)
+            tl = tk.Label(row, width=thumb_box[0], height=thumb_box[1], background=ROW_BG)
             tl.pack(side="left")
             side = tk.Frame(row, background=ROW_BG)
-            side.pack(side="right", padx=4)
+            side.pack(side="right", padx=px(4))
             trash = tk.Label(side, image=self.trash_icons[0], background=ROW_BG, cursor="hand2")
             trash.pack()
             index = tk.Label(side, text=f"{i + 1}/{len(self.items)}", foreground="#888", background=ROW_BG)
-            index.pack(pady=(4, 0))
+            index.pack(pady=(px(4), 0))
             trash.bind("<Button-1>", lambda _, i=i: self.delete_item(i))
             trash.bind("<Enter>", lambda _, t=trash: t.configure(image=self.trash_icons[1]))
             trash.bind("<Leave>", lambda _, t=trash: t.configure(image=self.trash_icons[0]))
             text = tk.Frame(row, background=ROW_BG)
-            text.pack(side="left", fill="x", expand=True, padx=6)
+            text.pack(side="left", fill="x", expand=True, padx=px(6))
             name = tk.Label(text, anchor="w", background=ROW_BG)
             name.pack(fill="x")
             size = tk.Label(text, text=f"{r.width} × {r.height}", anchor="w", foreground="#888", background=ROW_BG)
@@ -561,15 +572,15 @@ class App(tk.Tk):
             self.wm_thumb_label.configure(image="")
             return
         # Checkerboard behind the logo so transparent / white marks stay visible.
-        box = (48, 24)
+        box, cell = (px(48), px(24)), px(6)
         mark = self.wm.copy()
         mark.thumbnail(box, Image.Resampling.LANCZOS)
         bg = Image.new("RGBA", box, "#ffffff")
         draw = ImageDraw.Draw(bg)
-        for y in range(0, box[1], 6):
-            for x in range(0, box[0], 6):
-                if (x + y) // 6 % 2:
-                    draw.rectangle((x, y, x + 5, y + 5), fill="#d8d8d8")
+        for y in range(0, box[1], cell):
+            for x in range(0, box[0], cell):
+                if (x + y) // cell % 2:
+                    draw.rectangle((x, y, x + cell - 1, y + cell - 1), fill="#d8d8d8")
         bg.alpha_composite(mark, ((box[0] - mark.width) // 2, (box[1] - mark.height) // 2))
         self.wm_thumb = ImageTk.PhotoImage(bg)
         self.wm_thumb_label.configure(image=self.wm_thumb)
@@ -695,10 +706,11 @@ class App(tk.Tk):
         w, h = max(1, round(x1 - x0)), max(1, round(y1 - y0))
         self.mark_tk = ImageTk.PhotoImage(wm.resize((w, h), Image.Resampling.BILINEAR))
         c.create_image(x0, y0, image=self.mark_tk, anchor="nw", tags="mark")
-        c.create_rectangle(x0, y0, x1, y1, outline=ACCENT, dash=(4, 3), tags="mark")
+        c.create_rectangle(x0, y0, x1, y1, outline=ACCENT, dash=(4, 3), width=px(1), tags="mark")
+        r = px(HANDLE)
         for hx, hy in ((x0, y0), (x1, y0), (x0, y1), (x1, y1)):
-            c.create_rectangle(hx - HANDLE, hy - HANDLE, hx + HANDLE, hy + HANDLE,
-                               fill="white", outline=ACCENT, width=2, tags="mark")
+            c.create_rectangle(hx - r, hy - r, hx + r, hy + r,
+                               fill="white", outline=ACCENT, width=px(2), tags="mark")
 
     def mark_rect(self) -> tuple[float, float, float, float]:
         item = self.current()
@@ -712,7 +724,7 @@ class App(tk.Tk):
             return None
         x0, y0, x1, y1 = self.mark_rect()
         for name, (hx, hy) in {"nw": (x0, y0), "ne": (x1, y0), "sw": (x0, y1), "se": (x1, y1)}.items():
-            if abs(x - hx) <= HANDLE + 3 and abs(y - hy) <= HANDLE + 3:
+            if abs(x - hx) <= px(HANDLE + 3) and abs(y - hy) <= px(HANDLE + 3):
                 return name
         if x0 <= x <= x1 and y0 <= y <= y1:
             return "move"
@@ -786,4 +798,10 @@ def main() -> None:
         # Own taskbar group, so Windows shows our icon instead of python's.
         import ctypes
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("JokamQuimedit")
+        # Draw at the real screen resolution. Otherwise at 125% / 150% scaling Windows
+        # stretches a 100% bitmap of the window and everything looks blurry.
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)  # PROCESS_SYSTEM_DPI_AWARE
+        except (AttributeError, OSError):
+            ctypes.windll.user32.SetProcessDPIAware()
     App().mainloop()
