@@ -51,6 +51,12 @@ Kết quả:
 
 Nếu đã lên phiên bản mới, nhớ commit file `quick_edit_image/__init__.py` (nơi lưu số phiên bản).
 
+### Báo bản mới cho người dùng
+
+Mỗi lần mở, app hỏi ngầm GitHub bản Release mới nhất của repo. Nếu số phiên bản ở đó lớn hơn bản đang chạy, toolbar hiện dòng **"Có bản mới vX.Y.Z - bấm để tải"** cạnh số phiên bản; bấm vào sẽ mở trang Release. Không có mạng thì app bỏ qua, không báo lỗi.
+
+Để người dùng nhận được: build với phiên bản mới, rồi tạo Release trên GitHub với tag đúng số đó (vd. `v1.1.0`) và đính kèm file `.zip`. Repo phải để public thì app mới đọc được Release.
+
 Build dạng thư mục (không phải 1 file .exe) để app mở nhanh mỗi lần, không phải tự giải nén.
 
 Trên máy nhận: Windows 10/11 64-bit, không cần cài Python. Giải nén `.zip`, mở `JokamQuimedit.exe` (chuột phải → Send to → Desktop để tạo shortcut). Lần đầu Windows SmartScreen có thể cảnh báo vì app chưa ký số: bấm *More info* → *Run anyway*.

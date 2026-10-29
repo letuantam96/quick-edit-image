@@ -175,6 +175,33 @@ def empty_dir(path: Path) -> None:
             p.unlink()
 
 
+RELEASES_API = "https://api.github.com/repos/letuantam96/quick-edit-image/releases/latest"
+
+
+def parse_version(text: str) -> tuple[int, ...] | None:
+    """'v1.2.3' or '1.2.3' -> (1, 2, 3)."""
+    m = re.fullmatch(r"v?(\d+(?:\.\d+)*)", text.strip())
+    return tuple(map(int, m.group(1).split("."))) if m else None
+
+
+def newer_release(current: str, timeout: float = 5) -> tuple[str, str] | None:
+    """(tag, page url) of the latest GitHub release if it's newer than current; None otherwise or on any error."""
+    import json
+    import urllib.request
+    try:
+        req = urllib.request.Request(RELEASES_API, headers={"Accept": "application/vnd.github+json",
+                                                            "User-Agent": "JokamQuimedit"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.load(r)
+        tag, url = data["tag_name"], data["html_url"]
+    except Exception:  # offline, rate-limited, repo private, ...: just stay quiet
+        return None
+    latest, mine = parse_version(tag), parse_version(current)
+    if latest and mine and latest > mine:
+        return tag, url
+    return None
+
+
 EXPORT_EXT = ".jpg"
 MAX_BYTES = 100 * 1024
 MIN_QUALITY = 30

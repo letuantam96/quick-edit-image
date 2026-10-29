@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import tkinter as tk
+import webbrowser
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -15,7 +17,7 @@ from PIL import Image, ImageDraw, ImageTk
 from . import __version__
 from .core import (AUTO_STAMP, Item, Placement, auto_root, clamp_placement, clean_old_auto_dirs, compose,
                    empty_dir, export_item, grab_clipboard_images, load_watermark, name_problem, watermark_box,
-                   clean_name, slugify, EXPORT_EXT, MAX_BYTES)
+                   clean_name, newer_release, slugify, EXPORT_EXT, MAX_BYTES)
 
 CONFIG_PATH = Path.home() / ".quick_edit_image.json"
 ASSETS = Path(__file__).parent / "assets"
@@ -98,6 +100,7 @@ class App(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.refresh_all()
         self.after(200, self.bring_to_front)
+        self.check_for_update()
 
     def _center(self, w: int, h: int) -> None:
         """Open centered on the screen (without a position, Windows cascades each launch)."""
@@ -152,6 +155,22 @@ class App(tk.Tk):
         self.focus_force()
         self.after(300, lambda: self.attributes("-topmost", False))
 
+    def check_for_update(self) -> None:
+        """Ask GitHub for the latest release in the background; if it's newer, show a link in the toolbar."""
+        result: list = []
+        worker = threading.Thread(target=lambda: result.append(newer_release(__version__)), daemon=True)
+        worker.start()
+
+        def poll() -> None:  # Tk isn't thread-safe, so the UI is touched only from here
+            if worker.is_alive():
+                self.after(300, poll)
+            elif result and result[0]:
+                tag, url = result[0]
+                self.update_label.configure(text=f"Có bản mới {tag} - bấm để tải")
+                self.update_label.bind("<Button-1>", lambda _: webbrowser.open(url))
+                self.update_label.pack(side="right", padx=(0, 12))
+        self.after(300, poll)
+
     # ---------- config ----------
 
     def _load_config(self) -> dict:
@@ -199,6 +218,8 @@ class App(tk.Tk):
         self.wm_thumb_label.pack(side="left", padx=(0, 6))
         ttk.Button(top, text="Đổi…", command=self.pick_watermark).pack(side="left")
         ttk.Label(top, text=f"v{__version__}", foreground="#666").pack(side="right")
+        # Packed only once a newer release turns up (see check_for_update).
+        self.update_label = ttk.Label(top, foreground="#d35400", cursor="hand2", font=("Segoe UI", 9, "bold underline"))
 
         ttk.Separator(self).pack(fill="x")
         body = ttk.Frame(self)
