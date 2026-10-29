@@ -46,7 +46,6 @@ class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("JokamQuimedit - JOKAM Quick Image Edit for Thanh Hằng")
-        self.geometry("1250x800")
         self.minsize(860, 560)
         if os.name == "nt":
             self.iconbitmap(default=str(ASSETS / "icon.ico"))
@@ -54,6 +53,13 @@ class App(tk.Tk):
             self.iconphoto(True, tk.PhotoImage(file=str(ASSETS / "icon.png")))
 
         cfg = self._load_config()
+        self.window_geom = cfg.get("window", "")
+        if self._on_screen(self.window_geom):
+            self.geometry(self.window_geom)
+        else:  # first run, or the screen it was on is gone
+            self._center(1250, 800)
+        if cfg.get("maximized"):
+            self.state("zoomed")
         self.items: list[Item] = []
         self.selected: int | None = None
         self.last_placement = Placement(**cfg.get("placement", {}))
@@ -92,6 +98,37 @@ class App(tk.Tk):
         self.refresh_all()
         self.after(200, self.bring_to_front)
 
+    def _center(self, w: int, h: int) -> None:
+        """Open centered on the screen (without a position, Windows cascades each launch)."""
+        left, top, right, bottom = 0, 0, self.winfo_screenwidth(), self.winfo_screenheight()
+        if os.name == "nt":  # the work area leaves out the taskbar
+            import ctypes
+            from ctypes import wintypes
+            rect = wintypes.RECT()
+            if ctypes.windll.user32.SystemParametersInfoW(0x30, 0, ctypes.byref(rect), 0):  # SPI_GETWORKAREA
+                left, top, right, bottom = rect.left, rect.top, rect.right, rect.bottom
+        title_bar = 31  # frame around Tk's client area, which geometry() sizes
+        w = min(w, right - left - 16)
+        h = min(h, bottom - top - title_bar - 8)
+        x = left + (right - left - w) // 2
+        y = top + max(0, (bottom - top - h - title_bar) // 2)
+        self.geometry(f"{w}x{h}+{x}+{y}")
+
+    def _on_screen(self, geom: str) -> bool:
+        """Is the title bar of a saved 'WxH+X+Y' window on some monitor, so it can be dragged?"""
+        m = re.fullmatch(r"(\d+)x(\d+)\+(-?\d+)\+(-?\d+)", geom)
+        if not m:
+            return False
+        w, h, x, y = map(int, m.groups())
+        if os.name == "nt":
+            import ctypes
+            from ctypes import wintypes
+            user32 = ctypes.windll.user32
+            user32.MonitorFromPoint.argtypes = [wintypes.POINT, wintypes.DWORD]
+            user32.MonitorFromPoint.restype = ctypes.c_void_p
+            return bool(user32.MonitorFromPoint(wintypes.POINT(x + w // 2, y + 10), 0))  # MONITOR_DEFAULTTONULL
+        return 0 <= x + w // 2 < self.winfo_screenwidth() and 0 <= y < self.winfo_screenheight()
+
     def _sharp_taskbar_icon(self) -> None:
         """The taskbar shrinks Tk's 32 px icon to 24 px, which blurs it. Hand it the 24 px frame instead."""
         import ctypes
@@ -124,8 +161,12 @@ class App(tk.Tk):
 
     def save_config(self) -> None:
         p = self.last_placement
+        maximized = self.state() == "zoomed"
+        if self.state() == "normal" and self.winfo_ismapped():  # keep the last normal size, so un-maximizing next time restores it
+            self.window_geom = self.geometry()
         cfg = {"width": self.target_width, "max_kb": self.max_kb, "watermark": self.wm_path.get(), "out_dir": self.out_dir.get(),
-               "placement": {"x": p.x, "y": p.y, "scale": p.scale}}
+               "placement": {"x": p.x, "y": p.y, "scale": p.scale},
+               "window": self.window_geom, "maximized": maximized}
         try:
             CONFIG_PATH.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
         except OSError:

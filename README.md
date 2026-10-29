@@ -13,7 +13,7 @@ JOKAM Quick Image Edit for Thanh Hằng — paste ảnh, tự resize, đóng log
 7. Ảnh xuất ra là **JPG**, app tự chọn chất lượng cao nhất mà file vẫn không vượt dung lượng tối ưu (phần trong suốt thành nền trắng). Ảnh quá chi tiết không nén xuống được sẽ được báo ở thanh trạng thái. Sau khi xuất, mỗi dòng ở danh sách hiện dung lượng file (xanh nếu đạt, đỏ nếu vượt); chỉnh lại ảnh thì dòng này ẩn đi cho tới lần xuất sau. Chọn thư mục ở thanh dưới, bấm **Xuất vào thư mục** ngay cạnh nút Chọn thư mục. Ảnh chưa đặt tên, hoặc trùng tên sẽ nháy đỏ và không xuất cho đến khi sửa.
 8. Hoặc bấm **Xuất tự động** (góc dưới bên phải): app xuất vào `Desktop/JokamQuimedit/<NămThángNgày-GiờPhútGiây>` (thời điểm mở app, hoặc lúc bấm **Xoá tất cả ảnh** — coi như phiên mới), xoá sạch file cũ trong thư mục đó trước khi xuất, xuất xong tự mở thư mục. Các thư mục tự động cũ hơn 2 tuần được tự xoá khi mở app.
 
-App nhớ chiều rộng, dung lượng tối ưu, watermark, thư mục xuất và vị trí watermark cho lần mở sau (`~/.quick_edit_image.json`). Lần đầu chạy trên máy mới: chiều rộng 700, dung lượng 100KB, chưa có watermark.
+App nhớ chiều rộng, dung lượng tối ưu, watermark, thư mục xuất, vị trí watermark và vị trí / kích thước cửa sổ (kể cả đang phóng to toàn màn hình) cho lần mở sau (`~/.quick_edit_image.json`). Lần đầu chạy trên máy mới: chiều rộng 700, dung lượng 100KB, chưa có watermark, cửa sổ nằm giữa màn hình (cũng nằm giữa nếu vị trí cũ thuộc màn hình phụ đã rút ra).
 
 ## Chạy
 
