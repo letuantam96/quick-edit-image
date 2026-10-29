@@ -2,6 +2,8 @@
 
 JOKAM Quick Image Edit for Thanh Hằng — paste ảnh, tự resize, đóng logo watermark, đặt tên rồi xuất JPG nén theo dung lượng chọn trước (mặc định 100KB).
 
+![Giao diện JokamQuimedit](docs/screenshot.png)
+
 ## Cách dùng
 
 1. Điền **chiều rộng** (px, mặc định 700). Mọi ảnh sẽ được resize về đúng chiều rộng này (phóng to nếu ảnh nhỏ hơn), chiều cao giữ tỉ lệ.
@@ -62,3 +64,4 @@ Trên máy nhận: Windows 10/11 64-bit, không cần cài Python. Giải nén `
 - `JokamQuimedit.bat` — bấm đúp để mở app.
 - `build.bat` — hỏi lên phiên bản rồi đóng gói ra `dist/JokamQuimedit-<phiên bản>.zip`.
 - `bump_version.py` — đọc / tăng số phiên bản, `build.bat` dùng.
+- `docs/screenshot.png` — ảnh demo trong README.
